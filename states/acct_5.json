@@ -1,0 +1,179 @@
+{
+  "cookies": [
+    {
+      "name": "auth_token",
+      "value": "d8c79c5914c20bb5eb3d435d01092e197a9775a8",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "auth_token",
+      "value": "d8c79c5914c20bb5eb3d435d01092e197a9775a8",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "guest_id_ads",
+      "value": "v1%3A175744502850576717",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689911.843773,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_marketing",
+      "value": "v1%3A175744502850576717",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689911.843855,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "lang",
+      "value": "en",
+      "domain": "x.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "personalization_id",
+      "value": "\"v1_o/ZhkkdG6iEq019dckKpPA==\"",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005028.765911,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id",
+      "value": "v1%3A175744502850576717",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005028.765924,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "twid",
+      "value": "u%3D1962516257795899392",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1789665911.95655,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "ct0",
+      "value": "b7be5e4c1307d6e99af3e89b6c9d5ebf2a5697bb1ef466562f9daaba69815fe25d9c83054c5f3ada2a2dd5118d6ed0923ff8923c361650072f7d3be2e06450b3c0d5abc73c3133fc94c90655144b9815",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005028.765952,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__cuid",
+      "value": "3311c3778d924d7aba5c5b5e404a1238",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689888,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "IDE",
+      "value": "AHWqTUmG1kgxO4fVj6BEGHoysOrxrA06AfeHHctImn7LXry4RR9PetKGn4xt2o9JsjI",
+      "domain": ".doubleclick.net",
+      "path": "/",
+      "expires": 1792005040.617618,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_marketing",
+      "value": "v1%3A175744504219081604",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.420372,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_ads",
+      "value": "v1%3A175744504219081604",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.420454,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "personalization_id",
+      "value": "\"v1_beR/5RSKPKOBldeqEtVCcQ==\"",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.420472,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id",
+      "value": "v1%3A175744504219081604",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.420492,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "__cf_bm",
+      "value": ".ohH9GW7Qvh4O.doUjLebeil.FDNi3sIIErS.UABOxE-1758129877-1.0.1.1-cutFJXKhi9vs58A3SenB1kRqLEqE8fWyJ6ZfMpTpfWLiO0XDbNhTbZUI0DyRCtSr6iw1NaWNXxEaSVmz6.9l7Tdm4NpT0P5SiXuO31nksgI",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1758131677.88464,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://x.com",
+      "localStorage": [
+        {
+          "name": "__cuid",
+          "value": "3311c3778d924d7aba5c5b5e404a1238"
+        },
+        {
+          "name": "volume",
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

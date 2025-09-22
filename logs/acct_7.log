@@ -1,0 +1,8 @@
+2025-09-09T19:05:43.136Z [007 acct_7] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:05:44.242Z [007 acct_7] ❌ error: page.goto: net::ERR_INVALID_AUTH_CREDENTIALS at https://x.com/kevinyyang15/status/1965489860825022832
+Call log:
+[2m  - navigating to "https://x.com/kevinyyang15/status/1965489860825022832", waiting until "domcontentloaded"[22m
+
+2025-09-09T19:15:37.349Z [007 acct_7] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:27:01.572Z [007 acct_7] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:29:54.187Z [007 acct_7] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN

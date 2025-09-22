@@ -1,0 +1,20 @@
+2025-09-09T19:05:43.121Z [003 acct_3] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:05:44.136Z [003 acct_3] ❌ error: page.goto: net::ERR_INVALID_AUTH_CREDENTIALS at https://x.com/kevinyyang15/status/1965489860825022832
+Call log:
+[2m  - navigating to "https://x.com/kevinyyang15/status/1965489860825022832", waiting until "domcontentloaded"[22m
+
+2025-09-09T19:10:26.869Z [003 acct_3] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:15:34.417Z [003 acct_3] ✅ sesión completa
+2025-09-09T19:22:04.125Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-09T19:26:03.933Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-09T19:26:55.575Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:24:29.276Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:29:52.527Z [003 acct_3] ✅ sesión completa
+2025-09-17T17:47:34.634Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:47:37.979Z [003 acct_3] ❌ error: page.goto: Target page, context or browser has been closed
+Call log:
+[2m  - navigating to "https://x.com/i/broadcasts/1rmxPvlBrwdGN", waiting until "domcontentloaded"[22m
+
+2025-09-17T17:55:01.972Z [003 acct_3] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:55:48.352Z [003 acct_3] goto https://x.com/i/broadcasts/1OdKrOdvzZPGX
+2025-09-22T22:32:44.789Z [003 acct_3] goto https://x.com/i/broadcasts/1OdKrOdvzZPGX

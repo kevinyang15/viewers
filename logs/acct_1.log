@@ -1,0 +1,33 @@
+2025-09-09T19:05:43.131Z [001 acct_1] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:05:44.247Z [001 acct_1] ❌ error: page.goto: net::ERR_INVALID_AUTH_CREDENTIALS at https://x.com/kevinyyang15/status/1965489860825022832
+Call log:
+[2m  - navigating to "https://x.com/kevinyyang15/status/1965489860825022832", waiting until "domcontentloaded"[22m
+
+2025-09-09T19:09:05.061Z [001 acct_1] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:10:26.862Z [001 acct_1] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:15:43.848Z [001 acct_1] ✅ sesión completa
+2025-09-09T19:22:04.115Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-09T19:26:03.944Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-09T19:26:07.616Z [001 acct_1] ❌ error: page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://x.com/i/broadcasts/1rmxPvlBrwdGN
+Call log:
+[2m  - navigating to "https://x.com/i/broadcasts/1rmxPvlBrwdGN", waiting until "domcontentloaded"[22m
+
+2025-09-09T19:26:55.925Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-09T19:26:59.557Z [001 acct_1] ❌ error: page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://x.com/i/broadcasts/1rmxPvlBrwdGN
+Call log:
+[2m  - navigating to "https://x.com/i/broadcasts/1rmxPvlBrwdGN", waiting until "domcontentloaded"[22m
+
+2025-09-17T17:24:29.279Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:30:02.676Z [001 acct_1] ✅ sesión completa
+2025-09-17T17:47:34.635Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:47:37.961Z [001 acct_1] ❌ error: page.goto: Target page, context or browser has been closed
+Call log:
+[2m  - navigating to "https://x.com/i/broadcasts/1rmxPvlBrwdGN", waiting until "domcontentloaded"[22m
+
+2025-09-17T17:55:01.872Z [001 acct_1] goto https://x.com/i/broadcasts/1rmxPvlBrwdGN
+2025-09-17T17:55:48.355Z [001 acct_1] goto https://x.com/i/broadcasts/1OdKrOdvzZPGX
+2025-09-17T17:55:52.051Z [001 acct_1] ❌ error: page.goto: net::ERR_TUNNEL_CONNECTION_FAILED at https://x.com/i/broadcasts/1OdKrOdvzZPGX
+Call log:
+[2m  - navigating to "https://x.com/i/broadcasts/1OdKrOdvzZPGX", waiting until "domcontentloaded"[22m
+
+2025-09-22T22:32:44.694Z [001 acct_1] goto https://x.com/i/broadcasts/1OdKrOdvzZPGX

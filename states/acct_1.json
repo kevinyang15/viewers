@@ -1,0 +1,169 @@
+{
+  "cookies": [
+    {
+      "name": "auth_token",
+      "value": "ed6406cee0e4e17d12f8a482a6cc7c651e81d45d",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "auth_token",
+      "value": "ed6406cee0e4e17d12f8a482a6cc7c651e81d45d",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "guest_id_ads",
+      "value": "v1%3A175744502905992015",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689917.130211,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_marketing",
+      "value": "v1%3A175744502905992015",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689917.130254,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "lang",
+      "value": "en",
+      "domain": "x.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "personalization_id",
+      "value": "\"v1_8HoqxpdMNQEAGekAov7A4A==\"",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005029.728407,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id",
+      "value": "v1%3A175744502905992015",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005029.728423,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "twid",
+      "value": "u%3D1962499058007773184",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1789665917.483255,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "ct0",
+      "value": "b8f5d82c5bcf1e7a029caabc679b1f3e1aedf343aa6a21f688d6ad74f35495a9b9b2c4979edbbf94bb7df3ad83125edee3d52e3e8e2ff2cdad5422e80dc3d5ac8ca0822f269a76cd94da158eccaffc28",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792005029.728457,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__cuid",
+      "value": "9d78302e173e484888c188a320f632d2",
+      "domain": ".x.com",
+      "path": "/",
+      "expires": 1792689889,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "IDE",
+      "value": "AHWqTUlSWLNMiZDdGe8qYBik7HbLfqNHS33TY_AWa-uhVJdAHFL8YWOxSHTaqFiBbWw",
+      "domain": ".doubleclick.net",
+      "path": "/",
+      "expires": 1792005040.423921,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_marketing",
+      "value": "v1%3A175744504190329183",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.135586,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id_ads",
+      "value": "v1%3A175744504190329183",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.135625,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "personalization_id",
+      "value": "\"v1_EFmspJ2Jaiq7xOrYZk9t9Q==\"",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.135635,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "guest_id",
+      "value": "v1%3A175744504190329183",
+      "domain": ".twitter.com",
+      "path": "/",
+      "expires": 1792005042.135644,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://x.com",
+      "localStorage": [
+        {
+          "name": "__cuid",
+          "value": "9d78302e173e484888c188a320f632d2"
+        },
+        {
+          "name": "volume",
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

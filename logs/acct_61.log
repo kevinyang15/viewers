@@ -1,0 +1,5 @@
+2025-09-09T19:05:52.195Z [061 acct_61] goto https://x.com/kevinyyang15/status/1965489860825022832
+2025-09-09T19:05:52.616Z [061 acct_61] ❌ error: page.goto: net::ERR_INVALID_AUTH_CREDENTIALS at https://x.com/kevinyyang15/status/1965489860825022832
+Call log:
+[2m  - navigating to "https://x.com/kevinyyang15/status/1965489860825022832", waiting until "domcontentloaded"[22m
+

@@ -1,0 +1,372 @@
+[
+  {
+    "username": "acct_3",
+    "auth_token": "658aec9b8d25d6bd189d3b9afc0f612a224cbb45",
+    "reason": "exception"
+  },
+  {
+    "username": "acct_4",
+    "auth_token": "ea9342dd35731aac761c9cba564154b6f6fb58e7",
+    "reason": "exception"
+  },
+  {
+    "username": "acct_5",
+    "auth_token": "d8c79c5914c20bb5eb3d435d01092e197a9775a8",
+    "reason": "exception"
+  },
+  {
+    "username": "acct_10",
+    "auth_token": "bcfcb9838d1f91f174468aff728aeb2d9f2d903b",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_12",
+    "auth_token": "e218d91ace0e5248ce58d93293d1f542f267eeb9",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_13",
+    "auth_token": "10fe462269c1591ef9c87344ce61fd26ce3993be",
+    "reason": "unknown"
+  },
+  {
+    "username": "acct_14",
+    "auth_token": "0616081b7b7349656752e5e35c5093796627a8fe",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_20",
+    "auth_token": "127546345a0e5d89f310ec2392c893275e1eb92d",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_22",
+    "auth_token": "c558a280f6ed8519abd594080a5f933bd039c187",
+    "reason": "unknown"
+  },
+  {
+    "username": "acct_23",
+    "auth_token": "c980ec0a725873499fadd38d573f4bb8ac74e1bd",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_25",
+    "auth_token": "33ebfe84ddf3fe1f8964fa41435a649806487b8e",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_26",
+    "auth_token": "36dbd1bb38f0a32f755acfa75cfa49b1eb37a502",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_27",
+    "auth_token": "cab4668edc9e68e2a71a69b3f51e6dc1d76f98c7",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_30",
+    "auth_token": "0824d92ff26598c20f4128b5c1a42f8b11669cb3",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_35",
+    "auth_token": "bcc13091358250515ac68c734db5bab4b23914c7",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_36",
+    "auth_token": "9d1998293f75565baaf9fe6ce1b7c57f3cf21958",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_39",
+    "auth_token": "cc40beaf3aa94d6a2cab62ed7e313b2ca9380197",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_47",
+    "auth_token": "f92ea93360d942330f4c0d3592cd2849505014fe",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_48",
+    "auth_token": "9823a9e2e6fd0ef53cefb7e074fa029a40791fe7",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_52",
+    "auth_token": "56568d8c20042d8bcbfdba925aac9a9ac9f44bbf",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_53",
+    "auth_token": "5a5a91fc10840697834630cb9c9983bf8e76d98c",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_54",
+    "auth_token": "59df2f1375c64dc1b7d3b049ada3f5f8b84177a5",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_56",
+    "auth_token": "df1af170ab8275bb3363e1b89adaffdf642fd3c3",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_60",
+    "auth_token": "5e2a2172b372d10af2798f9f80c3f41de244d49d",
+    "reason": "unknown"
+  },
+  {
+    "username": "acct_65",
+    "auth_token": "5e62daa7e6395e58ca759d8fe0b1553d4e1f280a",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_67",
+    "auth_token": "f7b80d18d60140bdcc556f73e0a992f9c3f4fbbb",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_77",
+    "auth_token": "37b31d160535e2311a924884adf39714b36ccedd",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_78",
+    "auth_token": "90108b1208e9de058196997701f0c911ec99b4e4",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_79",
+    "auth_token": "d9c69c6b7d5be717fe0ef696c016f115e03973cb",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_80",
+    "auth_token": "2dadeda8e4885462225fe8bd94326740189a3566",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_81",
+    "auth_token": "1f4b1dcfc1ac9a754cf1b58452312cd5ebdb4d51",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_88",
+    "auth_token": "051947be0c5c5fa36337d29b055a8ea3bd11118c",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_90",
+    "auth_token": "d83a244e1228670ffbf89e499466797b5382b117",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_96",
+    "auth_token": "486720ad11f9a68ac5e6a2d1c355b5c72d548a7e",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_97",
+    "auth_token": "19df7e138abf0a55e0c74d927490ba54e45cd7f0",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_98",
+    "auth_token": "40cc7ef28a0b22b60ca6c908986b8b5bbb6a6632",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_101",
+    "auth_token": "ad9f94f7defe645980b7591b8ad2dc1b75593075",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_102",
+    "auth_token": "aaadb6216e630a61498feb6e7149ace23f4e3d56",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_103",
+    "auth_token": "aaadb6216e630a61498feb6e7149ace23f4e3d56",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_108",
+    "auth_token": "24da08f868a5e09f380a74f6ad4a59421c210120",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_112",
+    "auth_token": "24da08f868a5e09f380a74f6ad4a59421c210120",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_118",
+    "auth_token": "8c02f62dedde1fcaf67ca4e073caaffbd454262f",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_119",
+    "auth_token": "e08bf7c0e61bcaed2af6f2086f1fba798f03f720",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_121",
+    "auth_token": "b506bee1fa17ad25c0fc67d763a31cd56a3dff38",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_122",
+    "auth_token": "ebbc9d1ceacc986f1a845dd416b5c7bcf3a21e41",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_123",
+    "auth_token": "ec8b9e4273287aee4b31bfae261bebdde15e1a18",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_124",
+    "auth_token": "595e2a2fb1d6261e358668a18a5c48bbfd63145e",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_126",
+    "auth_token": "84185510e9294ff26a06e42ec6209ab515fe5587",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_127",
+    "auth_token": "119ba9df5dcdd36d912c73d9eccd8cb4f4bb629a",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_129",
+    "auth_token": "f9c5b3ebbf8666d6cd9bf2a71f6a43fca517400a",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_130",
+    "auth_token": "6aa749fc29bfbf98ef6c2e856e75ea75a3e9aa12",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_132",
+    "auth_token": "437552d94838ec18684edd8db562f065ffc10d6b",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_133",
+    "auth_token": "351686cb0024d82af6b8c6149c457a57f868468e",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_134",
+    "auth_token": "8d5ac85dd518198241e35f921f3d8542772e517d",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_135",
+    "auth_token": "6c907ea777758e56e3096abda951eed59586e8c2",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_136",
+    "auth_token": "d14c4d1d29afb53a7508b27a039ece5ba5c677a7",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_137",
+    "auth_token": "6e8921a2f01cfd35d951a1c4a5d26a566d454918",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_138",
+    "auth_token": "001710d3f427e4ba5b4af8fd209b0a1770bf012a",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_148",
+    "auth_token": "4f69aa05bc7875eef3c88ef0c663c91b8a1238b6",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_149",
+    "auth_token": "9bb4f5268f487168024f3affc292313e638fc72c",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_150",
+    "auth_token": "c1f0365e50b69872171c0082c75532c7cd7e8ebd",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_151",
+    "auth_token": "b7962db6bb08c286ecfaeb8ff4370426d76cb5c1",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_152",
+    "auth_token": "45d10f13d2fc1831f56dc44cfec2dea018bbf3c9",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_154",
+    "auth_token": "992301759769e60882744b21faa6beb49326b718",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_156",
+    "auth_token": "7960123fb8d58cef8aecec2fa11caf98630d1ffc",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_157",
+    "auth_token": "2b58d295a6607d92f0d180d78dfc82e8339a6b23",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_158",
+    "auth_token": "830beab786a348def5e5af918ce6aa58f1b052fc",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_159",
+    "auth_token": "29147ed1d84d60ef03fc3f6267e8f3901d72b5ee",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_161",
+    "auth_token": "9e73d999656b12ad596c4b6b85bdef03eb4afbb6",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_162",
+    "auth_token": "63c0969b66ff2e0e51c74a18ac6d73a139c9ebdac",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_170",
+    "auth_token": "53b67805ddc9491bb405239fa1f224d169947964",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_171",
+    "auth_token": "e8cdeeb8575bd112aabf454ebdd57bd94e359226",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_173",
+    "auth_token": "b6624a45f699061d89742eb0de0955e539ca7a42",
+    "reason": "redirect_to_login"
+  },
+  {
+    "username": "acct_175",
+    "auth_token": "41f7d97e591d7fd2f84f5afd4d49ff4da58b766b",
+    "reason": "unknown"
+  }
+]
