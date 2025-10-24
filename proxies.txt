@@ -1,2 +1,6 @@
-socks5h://spnks9lp0f:q8+n3tym1EeNttA6cS@gate.decodo.com:7000
+http://user-tester523-sessionduration-1:=rIz9L09v8oueutnLS@gate.decodo.com:10001
+http://user-tester523-sessionduration-1:=rIz9L09v8oueutnLS@gate.decodo.com:10002
+http://user-tester523-sessionduration-1:=rIz9L09v8oueutnLS@gate.decodo.com:10003
+http://user-tester523-sessionduration-1:=rIz9L09v8oueutnLS@gate.decodo.com:10004
+http://user-tester523-sessionduration-1:=rIz9L09v8oueutnLS@gate.decodo.com:10005
 

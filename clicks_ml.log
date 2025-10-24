@@ -1,0 +1,33 @@
+2025-10-07T19:53:40.176Z [AUTH] POST https://api.multilogin.com/user/signin payload={"email":"kevinyyang15@gmail.com"}
+2025-10-07T19:53:41.108Z [AUTH] status=200
+2025-10-07T19:53:41.110Z [AUTH] responseKeys=status,data
+2025-10-07T19:53:41.110Z [PROFILES] GET https://api.multilogin.com/profile?workspace_id=097fdfc7-a948-4a71-a586-02d82fcaac6b
+2025-10-07T19:53:41.344Z [PROFILES] status=404
+2025-10-07T19:53:41.346Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:24.442Z [AUTH] POST https://api.multilogin.com/user/signin payload={"email":"kevinyyang15@gmail.com"}
+2025-10-07T19:55:25.357Z [AUTH] status=200
+2025-10-07T19:55:25.361Z [AUTH] responseKeys=status,data
+2025-10-07T19:55:25.361Z [PROFILES] GET https://api.multilogin.com/profile/list?workspace_id=097fdfc7-a948-4a71-a586-02d82fcaac6b
+2025-10-07T19:55:25.607Z [PROFILES] status=404
+2025-10-07T19:55:25.609Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:25.609Z [PROFILES] trying next fallback endpoint
+2025-10-07T19:55:25.610Z [PROFILES] GET https://api.multilogin.com/profile/all?workspace_id=097fdfc7-a948-4a71-a586-02d82fcaac6b
+2025-10-07T19:55:25.850Z [PROFILES] status=404
+2025-10-07T19:55:25.852Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:25.853Z [PROFILES] trying next fallback endpoint
+2025-10-07T19:55:25.853Z [PROFILES] GET https://api.multilogin.com/profile/097fdfc7-a948-4a71-a586-02d82fcaac6b
+2025-10-07T19:55:26.090Z [PROFILES] status=404
+2025-10-07T19:55:26.092Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:26.092Z [PROFILES] trying next fallback endpoint
+2025-10-07T19:55:26.092Z [PROFILES] POST https://api.multilogin.com/profile/list
+2025-10-07T19:55:26.332Z [PROFILES] status=404
+2025-10-07T19:55:26.335Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:26.335Z [PROFILES] trying next fallback endpoint
+2025-10-07T19:55:26.335Z [PROFILES] GET https://api.multilogin.com/profile?workspace_id=097fdfc7-a948-4a71-a586-02d82fcaac6b
+2025-10-07T19:55:26.575Z [PROFILES] status=404
+2025-10-07T19:55:26.577Z [PROFILES] errorBody=404 page not found
+2025-10-07T19:55:26.577Z [PROFILES] trying next fallback endpoint
+2025-10-07T19:56:53.712Z [AUTH] POST https://api.multilogin.com/api/v2/user/signin payload={"email":"kevinyyang15@gmail.com"}
+2025-10-07T19:56:54.517Z [AUTH] status=404
+2025-10-07T20:31:35.250Z [AUTH] POST https://api.multilogin.com/api/v2/user/signin payload={"email":"kevinyyang15@gmail.com"}
+2025-10-07T20:31:36.298Z [AUTH] status=404

@@ -1,12 +1,16 @@
 // test-harness.js
+import 'dotenv/config';
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
 import { chromium } from 'playwright';
 import pLimit from 'p-limit';
 
-const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/?utm_source=institucional&utm_medium=header&utm_source_sub=institucional-header';
-const HEADLESS = (process.env.HEADLESS || '1') === '1';
+const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
+const SHOW_BROWSER = (process.env.SHOW_BROWSER || '1') === '1';
+const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
+const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
+const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
 const POOL_SIZE = parseInt(process.env.POOL_SIZE || '1', 10);
 const WAIT_MIN = parseInt(process.env.WAIT_MIN || '3000', 10);
@@ -15,9 +19,21 @@ const LAND_MIN = parseInt(process.env.LAND_MIN || '5000', 10);
 const LAND_MAX = parseInt(process.env.LAND_MAX || '10000', 10);
 const LOG_FILE = process.env.LOG_FILE || './clicks.log';
 const GCLID_LOG = process.env.GCLID_LOG || './gclids.log';
+const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '4000', 10);
+const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '9000', 10);
+const SCROLL_ITERATIONS = parseInt(process.env.SCROLL_ITERATIONS || '2', 10);
+const SCROLL_DISTANCE = parseInt(process.env.SCROLL_DISTANCE || '180', 10);
+const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '4000', 10);
 
 const PROXIES_FILE = process.env.PROXIES_FILE || './proxies.txt'; // cada línea: socks5h://user:pass@gate.decodo.com:7000
 const UAS_FILE = process.env.UAS_FILE || './useragents.txt';
+const PROXY_PROTOCOL = (process.env.PROXY_PROTOCOL || 'http').replace(/:\/\/?$/, '');
+const PROXY_HOST = process.env.PROXY_HOST;
+const PROXY_USERNAME = process.env.PROXY_USERNAME;
+const PROXY_PASSWORD = process.env.PROXY_PASSWORD;
+const PROXY_PORT_START = parseInt(process.env.PROXY_PORT_START || '10001', 10);
+const PROXY_PORT_COUNT = parseInt(process.env.PROXY_PORT_COUNT || '1000', 10);
+const PROXY_PORTS = process.env.PROXY_PORTS; // opcional: lista separada por comas
 
 // helpers
 function randInt(min, max) { return min + Math.floor(Math.random() * (max - min)); }
@@ -46,6 +62,20 @@ function parseProxyUrl(proxyUrl) {
   } catch (e) {
     return null;
   }
+}
+
+function generateProxiesFromEnv() {
+  if (!PROXY_HOST || !PROXY_USERNAME || !PROXY_PASSWORD) return [];
+  const protocol = `${PROXY_PROTOCOL.toLowerCase()}://`;
+  const ports = PROXY_PORTS
+    ? PROXY_PORTS.split(',').map(p => parseInt(p.trim(), 10)).filter(Number.isFinite)
+    : Array.from({ length: Math.max(PROXY_PORT_COUNT, 0) }, (_, i) => PROXY_PORT_START + i);
+
+  return ports.map(port => {
+    const userEnc = encodeURIComponent(PROXY_USERNAME);
+    const passEnc = encodeURIComponent(PROXY_PASSWORD);
+    return `${protocol}${userEnc}:${passEnc}@${PROXY_HOST}:${port}`;
+  });
 }
 
 async function logLine(line) {
@@ -91,6 +121,9 @@ async function runOne(proxyStr, ua, idx) {
         '--autoplay-policy=no-user-gesture-required'
       ]
     };
+    if (SHOW_BROWSER && DEBUG_SLOWMO > 0) {
+      launchOpts.slowMo = DEBUG_SLOWMO;
+    }
     // Usar canal Chrome solo si NO es SOCKS. Bundled Chromium soporta SOCKS auth mejor.
     if (!proxy.isSocks && BROWSER_CHANNEL && BROWSER_CHANNEL !== 'chromium') {
       launchOpts.channel = BROWSER_CHANNEL;
@@ -98,9 +131,24 @@ async function runOne(proxyStr, ua, idx) {
     try {
       browser = await chromium.launch(launchOpts);
     } catch (err) {
-      const msg = String(err && err.message || err || '');
+      const msg = String((err && err.message) || err || '');
       if (proxy.isSocks && /socks5/i.test(msg)) {
-        await logLine(`${prefix} retry without Chrome channel due to SOCKS5 error`);
+        await logLine(`${prefix} retry using --proxy-server for SOCKS5 auth`);
+        const fallbackOpts = { ...launchOpts };
+        delete fallbackOpts.channel;
+        delete fallbackOpts.proxy;
+        const baseHost = proxy.server.replace(/^[^:]+:\/\//i, '');
+        const encodedUser = proxy.username ? encodeURIComponent(proxy.username) : null;
+        const encodedPass = proxy.password ? encodeURIComponent(proxy.password) : null;
+        const auth = encodedUser ? `${encodedUser}:${encodedPass || ''}@` : '';
+        const proxyArg = `socks5://${auth}${baseHost}`;
+        fallbackOpts.args = [
+          ...launchOpts.args.filter(a => !/^--proxy-server=/i.test(a)),
+          `--proxy-server=${proxyArg}`
+        ];
+        browser = await chromium.launch(fallbackOpts);
+      } else if (launchOpts.channel) {
+        await logLine(`${prefix} retry without Chrome channel due to launch error: ${msg}`);
         const fallbackOpts = { ...launchOpts };
         delete fallbackOpts.channel;
         browser = await chromium.launch(fallbackOpts);
@@ -141,9 +189,21 @@ async function runOne(proxyStr, ua, idx) {
       if (u) logGclid(prefix, 'page-request', u);
     });
 
+    if (SHOW_BROWSER) {
+      await logLine(`${prefix} DEBUG show-browser enabled (slowMo=${launchOpts.slowMo||0} stayOpen=${DEBUG_STAY_OPEN})`);
+    }
+
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    // pequeño scroll y movimiento falso
-    await page.evaluate(() => { window.scrollBy(0, 300); });
+
+    await page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX));
+
+    for (let i = 0; i < SCROLL_ITERATIONS; i++) {
+      const direction = i % 2 === 0 ? 1 : -1;
+      const distance = direction * (SCROLL_DISTANCE + randInt(20, 60));
+      await page.mouse.wheel(0, distance);
+      await page.waitForTimeout(randInt(400, 900));
+    }
+
     await page.mouse.move(100 + Math.random()*300, 100 + Math.random()*200);
 
     // Buscar iframes de Google Ads (aswift / googleads)
@@ -159,6 +219,70 @@ async function runOne(proxyStr, ua, idx) {
       return out;
     }
     const allFrames = collectFrames(page.mainFrame());
+    const clickFrameElement = async (frameHandle) => {
+      try {
+        const elementHandle = await frameHandle.frameElement();
+        if (!elementHandle) return false;
+        return await clickElementHandle(elementHandle);
+      } catch {
+        return false;
+      }
+    };
+
+    const blankFrames = await Promise.all(allFrames
+      .filter(f => f.url() === 'about:blank')
+      .map(async (f) => {
+        try {
+          const attrs = await f.evaluate(() => {
+            const el = document.body || document.documentElement;
+            return {
+              title: el?.getAttribute?.('title') || '',
+              id: el?.id || '',
+              className: el?.className || ''
+            };
+          }).catch(()=>null);
+          if (attrs && /ad|blank/i.test(`${attrs.title} ${attrs.id} ${attrs.className}`)) {
+            await logLine(`${prefix} BLANK_FRAME_DETECTED ${JSON.stringify(attrs)}`);
+            return f;
+          }
+        } catch {}
+        return null;
+      }));
+    for (const frame of blankFrames.filter(Boolean)) {
+      try {
+        await page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX));
+        const clickable = await frame.$('a, button, [role="button"], [role="link"], iframe');
+        if (clickable) {
+          await clickable.click({ delay: 150 }).catch(()=>{});
+        } else {
+          const clickedElement = await clickFrameElement(frame);
+          if (!clickedElement) {
+            await frame.click('body, html', { delay: 150 }).catch(()=>{});
+          }
+        }
+        const stay = randInt(LAND_MIN, LAND_MAX);
+        await page.waitForTimeout(stay);
+      } catch (err) {
+        await logLine(`${prefix} BLANK_FRAME_CLICK_ERROR ${err.message}`);
+      }
+    }
+
+    const adsByGoogleElements = await page.$$('ins.adsbygoogle, ins[data-ad-status], ins[class*="adsbygoogle"], ins[id*="google"]');
+    for (const element of adsByGoogleElements) {
+      try {
+        await element.scrollIntoViewIfNeeded().catch(()=>{});
+        await element.hover({ timeout: 2000 }).catch(()=>{});
+        await element.click({ delay: 150 }).catch(()=>{});
+        const iframeChild = await element.$('iframe');
+        if (iframeChild) {
+          await iframeChild.hover({ timeout: 2000 }).catch(()=>{});
+          await iframeChild.click({ delay: 150 }).catch(()=>{});
+        }
+        await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
+      } catch (err) {
+        await logLine(`${prefix} ADSBYGOOGLE_CLICK_ERROR ${err.message}`);
+      }
+    }
     const adFrames = allFrames.filter(f => {
       const url = f.url();
       return /googleads\.g\.doubleclick\.net|aswift_/i.test(url) || /\/ads\?/i.test(url);
@@ -203,6 +327,8 @@ async function runOne(proxyStr, ua, idx) {
               await f.click('html', { position: { x: cx, y: cy }, delay: 100 }).catch(()=>{});
               const stay = randInt(LAND_MIN, LAND_MAX);
               await page.waitForTimeout(stay);
+            } else {
+              await clickFrameElement(f);
             }
           }
         } catch (err) {
@@ -212,6 +338,10 @@ async function runOne(proxyStr, ua, idx) {
     }
 
     await logLine(`${prefix} OK`);
+
+    if (SHOW_BROWSER && DEBUG_STAY_OPEN > 0) {
+      await page.waitForTimeout(DEBUG_STAY_OPEN);
+    }
   } catch (err) {
     await logLine(`${prefix} ERROR ${err.message}`);
   } finally {
@@ -223,11 +353,17 @@ let STOP = false;
 process.on('SIGINT', () => { console.log('SIGINT -> stopping after current batch'); STOP = true; });
 
 async function main() {
-  const proxies = await loadLines(PROXIES_FILE);
+  let proxies = await loadLines(PROXIES_FILE);
+  if (proxies.length === 0) {
+    proxies = generateProxiesFromEnv();
+    if (proxies.length > 0) {
+      console.log(`Generated ${proxies.length} proxies from env configuration.`);
+    }
+  }
   const uas = await loadLines(UAS_FILE);
 
   if (proxies.length === 0) {
-    console.error('No proxies found. Crea proxies.txt con una línea por proxy (socks5h://user:pass@host:port).');
+    console.error('No proxies found. Crea proxies.txt o define PROXY_HOST/USERNAME/PASSWORD para generar proxies via env.');
     process.exit(1);
   }
   if (uas.length === 0) {

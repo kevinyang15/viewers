@@ -163,6 +163,8 @@ async function worker(workerId){
 async function runOne(acc, idx) {
   const name = acc.username || `acct_${idx + 1}`;
   const logPrefix = `[${String(idx + 1).padStart(3, '0')} ${name}]`;
+  let startListeningClicked = false;
+  let gotItClickCount = 0;
 
   // proxy por cuenta (si se definió en accounts.json) + storageState persistente
   const statePath = path.resolve(STATES_DIR, `${name}.json`);
@@ -301,16 +303,21 @@ async function runOne(acc, idx) {
         if (!btn) throw new Error('botón no encontrado');
         await btn.scrollIntoViewIfNeeded();
         await btn.dblclick({ timeout: 15_000 });
+        startListeningClicked = true;
         await log('✔️ botón doble-clickeado');
 
         // Intentar cerrar el popup "Got it" si aparece
         const gotItClicked = await clickGotItIfPresent(page, log);
+        if (gotItClicked) gotItClickCount++;
         if (!gotItClicked) {
           const deadline = Date.now() + GOT_IT_TIMEOUT;
           while (Date.now() < deadline) {
             await page.waitForTimeout(500);
             const clicked = await clickGotItIfPresent(page, log);
-            if (clicked) break;
+            if (clicked) {
+              gotItClickCount++;
+              break;
+            }
           }
         }
       } catch (e) {
@@ -325,8 +332,23 @@ async function runOne(acc, idx) {
     while (Date.now() < until) {
       const sleepMs = Math.min(GOT_IT_CHECK_INTERVAL, until - Date.now());
       if (sleepMs > 0) await sleep(sleepMs);
-      await clickGotItIfPresent(page, log);
+      const clicked = await clickGotItIfPresent(page, log);
+      if (clicked) gotItClickCount++;
     }
+
+    const summaryParts = [
+      `visitó @${TARGET_URL}`,
+      `permaneció ${SESSION_MIN} minutos`
+    ];
+    summaryParts.push(startListeningClicked ? 'botón "Start listening" clickeado' : 'botón "Start listening" no disponible');
+    if (GOT_IT_LABELS.length) {
+      summaryParts.push(
+        gotItClickCount > 0
+          ? `modal "Got it" cerrado ${gotItClickCount} vez${gotItClickCount === 1 ? '' : 'es'}`
+          : 'modal "Got it" no apareció'
+      );
+    }
+    await log(`📝 resumen: ${summaryParts.join(' | ')}`);
 
     await log('✅ sesión completa');
   } catch (e) {
