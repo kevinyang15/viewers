@@ -7,18 +7,19 @@ import { chromium } from 'playwright';
 import pLimit from 'p-limit';
 
 const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
-const SHOW_BROWSER = (process.env.SHOW_BROWSER || '1') === '1';
+const SHOW_BROWSER = (process.env.SHOW_BROWSER || '0') === '1';
 const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
-const POOL_SIZE = parseInt(process.env.POOL_SIZE || '1', 10);
+const POOL_SIZE = parseInt(process.env.POOL_SIZE || '10', 10);
 const WAIT_MIN = parseInt(process.env.WAIT_MIN || '3000', 10);
 const WAIT_MAX = parseInt(process.env.WAIT_MAX || '8000', 10);
 const LAND_MIN = parseInt(process.env.LAND_MIN || '5000', 10);
 const LAND_MAX = parseInt(process.env.LAND_MAX || '10000', 10);
 const LOG_FILE = process.env.LOG_FILE || './clicks.log';
 const GCLID_LOG = process.env.GCLID_LOG || './gclids.log';
+const CONSOLE_LOGS = (process.env.CONSOLE_LOGS || '1') === '1';
 const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '4000', 10);
 const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '9000', 10);
 const SCROLL_ITERATIONS = parseInt(process.env.SCROLL_ITERATIONS || '2', 10);
@@ -81,7 +82,7 @@ function generateProxiesFromEnv() {
 async function logLine(line) {
   const l = `${new Date().toISOString()} ${line}\n`;
   await fs.appendFile(LOG_FILE, l).catch(()=>{});
-  process.stdout.write(l);
+  if (CONSOLE_LOGS) process.stdout.write(l);
 }
 
 async function logGclid(prefix, where, urlStr) {
@@ -97,6 +98,7 @@ async function logGclid(prefix, where, urlStr) {
     if (found.length > 0) {
       const line = `${new Date().toISOString()} ${prefix} ${where} ${url.origin}${url.pathname} ${found.join('&')}\n`;
       await fs.appendFile(GCLID_LOG, line).catch(()=>{});
+      if (CONSOLE_LOGS) process.stdout.write(line);
     }
   } catch {}
 }
@@ -242,7 +244,7 @@ async function runOne(proxyStr, ua, idx) {
             };
           }).catch(()=>null);
           if (attrs && /ad|blank/i.test(`${attrs.title} ${attrs.id} ${attrs.className}`)) {
-            await logLine(`${prefix} BLANK_FRAME_DETECTED ${JSON.stringify(attrs)}`);
+        await logLine(`${prefix} BLANK_FRAME_DETECTED ${JSON.stringify(attrs)}`);
             return f;
           }
         } catch {}
