@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import pLimit from 'p-limit';
 
 const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
-const SHOW_BROWSER = (process.env.SHOW_BROWSER || '1') === '1';
+const SHOW_BROWSER = (process.env.SHOW_BROWSER || '0') === '1';
 const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
@@ -44,7 +44,7 @@ function randInt(min, max) { return min + Math.floor(Math.random() * (max - min)
 function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function isContextClosedError(err) {
   const msg = String(err && err.message || err || '');
-  return /target page, context or browser has been closed/i.test(msg) || /cannot find context with specified id/i.test(msg);
+  return /target page, context or browser has been closed/i.test(msg) || /cannot find context with specified id/i.test(msg) || /ERR_ABORTED/i.test(msg) || /net::ERR_/i.test(msg);
 }
 
 async function loadLines(file) {
