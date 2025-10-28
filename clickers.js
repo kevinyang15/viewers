@@ -12,19 +12,21 @@ const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
-const POOL_SIZE = parseInt(process.env.POOL_SIZE || '10', 10);
-const WAIT_MIN = parseInt(process.env.WAIT_MIN || '3000', 10);
-const WAIT_MAX = parseInt(process.env.WAIT_MAX || '8000', 10);
-const LAND_MIN = parseInt(process.env.LAND_MIN || '5000', 10);
-const LAND_MAX = parseInt(process.env.LAND_MAX || '10000', 10);
+const POOL_SIZE = parseInt(process.env.POOL_SIZE || '20', 10);
+const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1500', 10);
+const WAIT_MAX = parseInt(process.env.WAIT_MAX || '4000', 10);
+const LAND_MIN = parseInt(process.env.LAND_MIN || '2500', 10);
+const LAND_MAX = parseInt(process.env.LAND_MAX || '6000', 10);
 const LOG_FILE = process.env.LOG_FILE || './clicks.log';
 const GCLID_LOG = process.env.GCLID_LOG || './gclids.log';
 const CONSOLE_LOGS = (process.env.CONSOLE_LOGS || '1') === '1';
-const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '4000', 10);
-const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '9000', 10);
+const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '2000', 10);
+const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '5000', 10);
 const SCROLL_ITERATIONS = parseInt(process.env.SCROLL_ITERATIONS || '2', 10);
 const SCROLL_DISTANCE = parseInt(process.env.SCROLL_DISTANCE || '180', 10);
 const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '4000', 10);
+const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '12000', 10);
+const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '400', 10);
 
 const PROXIES_FILE = process.env.PROXIES_FILE || './proxies.txt'; // cada línea: socks5h://user:pass@gate.decodo.com:7000
 const UAS_FILE = process.env.UAS_FILE || './useragents.txt';
@@ -90,13 +92,13 @@ async function logGclid(prefix, where, urlStr) {
     const url = new URL(urlStr);
     const params = url.searchParams;
     const keys = ['gclid', 'gclsrc', 'gbraid', 'wbraid', 'yclid', 'msclkid', 'fbclid'];
-    const found = [];
+    const entries = [];
     for (const k of keys) {
       const v = params.get(k);
-      if (v) found.push(`${k}=${v}`);
+      if (v) entries.push(`${k}=${v}`);
     }
-    if (found.length > 0) {
-      const line = `${new Date().toISOString()} ${prefix} ${where} ${url.origin}${url.pathname} ${found.join('&')}\n`;
+    if (entries.length > 0) {
+      const line = `${new Date().toISOString()} ${where} ${entries.join(' ')}\n`;
       await fs.appendFile(GCLID_LOG, line).catch(()=>{});
       if (CONSOLE_LOGS) process.stdout.write(line);
     }
@@ -104,12 +106,14 @@ async function logGclid(prefix, where, urlStr) {
 }
 
 async function runOne(proxyStr, ua, idx) {
-  const prefix = `[#${idx}] proxy=${proxyStr} ua="${ua}"`;
   const proxy = parseProxyUrl(proxyStr);
   if (!proxy) {
-    await logLine(`${prefix} SKIP invalid-proxy`);
+    await logLine(`[invalid-proxy] ${proxyStr}`);
     return;
   }
+  const portMatch = proxyStr.match(/:(\d+)$/);
+  const proxyPort = portMatch ? portMatch[1] : 'unknown';
+  const prefix = `[port:${proxyPort} #${idx}]`;
 
   let browser;
   try {
@@ -169,6 +173,21 @@ async function runOne(proxyStr, ua, idx) {
     const page = await context.newPage();
     const seenIds = new Set();
 
+    async function waitForBanners() {
+      const start = Date.now();
+      while (Date.now() - start < BANNER_WAIT_TIMEOUT) {
+        const hasIns = await page.$('ins.adsbygoogle, ins[data-ad-status]');
+        const hasFrames = await page.$('iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"]');
+        if (hasIns || hasFrames) {
+          if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_detected\n`);
+          return true;
+        }
+        await page.waitForTimeout(BANNER_WAIT_POLL);
+      }
+      if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_timeout\n`);
+      return false;
+    }
+
     // Captura gclid en popups (al hacer click en banners suelen abrir nuevas tabs)
     page.on('popup', (popup) => {
       popup.on('framenavigated', (frame) => {
@@ -192,7 +211,7 @@ async function runOne(proxyStr, ua, idx) {
     });
 
     if (SHOW_BROWSER) {
-      await logLine(`${prefix} DEBUG show-browser enabled (slowMo=${launchOpts.slowMo||0} stayOpen=${DEBUG_STAY_OPEN})`);
+      await logLine(`${prefix} show-browser enabled (slowMo=${launchOpts.slowMo||0} stayOpen=${DEBUG_STAY_OPEN})`);
     }
 
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -205,6 +224,8 @@ async function runOne(proxyStr, ua, idx) {
       await page.mouse.wheel(0, distance);
       await page.waitForTimeout(randInt(400, 900));
     }
+
+    await waitForBanners();
 
     await page.mouse.move(100 + Math.random()*300, 100 + Math.random()*200);
 
@@ -252,7 +273,7 @@ async function runOne(proxyStr, ua, idx) {
       }));
     for (const frame of blankFrames.filter(Boolean)) {
       try {
-        await page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX));
+        await waitForBanners();
         const clickable = await frame.$('a, button, [role="button"], [role="link"], iframe');
         if (clickable) {
           await clickable.click({ delay: 150 }).catch(()=>{});
