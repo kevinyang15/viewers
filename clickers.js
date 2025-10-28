@@ -41,6 +41,10 @@ const PROXY_PORTS = process.env.PROXY_PORTS; // opcional: lista separada por com
 // helpers
 function randInt(min, max) { return min + Math.floor(Math.random() * (max - min)); }
 function sample(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function isContextClosedError(err) {
+  const msg = String(err && err.message || err || '');
+  return /target page, context or browser has been closed/i.test(msg) || /cannot find context with specified id/i.test(msg);
+}
 
 async function loadLines(file) {
   try {
@@ -114,6 +118,25 @@ async function runOne(proxyStr, ua, idx) {
   const portMatch = proxyStr.match(/:(\d+)$/);
   const proxyPort = portMatch ? portMatch[1] : 'unknown';
   const prefix = `[port:${proxyPort} #${idx}]`;
+  let gotGclid = false;
+  let loggedGclidDone = false;
+
+  const finishIfGclid = async () => {
+    if (gotGclid && !loggedGclidDone) {
+      loggedGclidDone = true;
+      await logLine(`${prefix} gclid_done`);
+      return true;
+    }
+    return gotGclid;
+  };
+
+  const markGclid = (where, url) => {
+    if (!gotGclid) {
+      gotGclid = true;
+      logGclid(prefix, where, url);
+      if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured\n`);
+    }
+  };
 
   let browser;
   try {
@@ -192,23 +215,25 @@ async function runOne(proxyStr, ua, idx) {
     page.on('popup', (popup) => {
       popup.on('framenavigated', (frame) => {
         const u = frame.url();
-        if (u) logGclid(prefix, 'popup-navigate', u);
+        if (u) markGclid('popup-navigate', u);
       });
       popup.on('request', (req) => {
         const u = req.url();
-        if (u) logGclid(prefix, 'popup-request', u);
+        if (u) markGclid('popup-request', u);
       });
     });
 
     // Captura gclid en la página principal
     page.on('framenavigated', (frame) => {
       const u = frame.url();
-      if (u) logGclid(prefix, 'page-navigate', u);
+      if (u) markGclid('page-navigate', u);
     });
     page.on('request', (req) => {
       const u = req.url();
-      if (u) logGclid(prefix, 'page-request', u);
+      if (u) markGclid('page-request', u);
     });
+
+    if (await finishIfGclid()) return;
 
     if (SHOW_BROWSER) {
       await logLine(`${prefix} show-browser enabled (slowMo=${launchOpts.slowMo||0} stayOpen=${DEBUG_STAY_OPEN})`);
@@ -216,16 +241,23 @@ async function runOne(proxyStr, ua, idx) {
 
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
+    if (await finishIfGclid()) return;
+
     await page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX));
+
+    if (await finishIfGclid()) return;
 
     for (let i = 0; i < SCROLL_ITERATIONS; i++) {
       const direction = i % 2 === 0 ? 1 : -1;
       const distance = direction * (SCROLL_DISTANCE + randInt(20, 60));
       await page.mouse.wheel(0, distance);
       await page.waitForTimeout(randInt(400, 900));
+      if (await finishIfGclid()) return;
     }
 
     await waitForBanners();
+
+    if (await finishIfGclid()) return;
 
     await page.mouse.move(100 + Math.random()*300, 100 + Math.random()*200);
 
@@ -272,6 +304,7 @@ async function runOne(proxyStr, ua, idx) {
         return null;
       }));
     for (const frame of blankFrames.filter(Boolean)) {
+      if (await finishIfGclid()) break;
       try {
         await waitForBanners();
         const clickable = await frame.$('a, button, [role="button"], [role="link"], iframe');
@@ -286,12 +319,18 @@ async function runOne(proxyStr, ua, idx) {
         const stay = randInt(LAND_MIN, LAND_MAX);
         await page.waitForTimeout(stay);
       } catch (err) {
-        await logLine(`${prefix} BLANK_FRAME_CLICK_ERROR ${err.message}`);
+        if (!isContextClosedError(err)) {
+          await logLine(`${prefix} BLANK_FRAME_CLICK_ERROR ${err.message}`);
+        }
+        break;
       }
     }
 
+    if (await finishIfGclid()) return;
+
     const adsByGoogleElements = await page.$$('ins.adsbygoogle, ins[data-ad-status], ins[class*="adsbygoogle"], ins[id*="google"]');
     for (const element of adsByGoogleElements) {
+      if (await finishIfGclid()) break;
       try {
         await element.scrollIntoViewIfNeeded().catch(()=>{});
         await element.hover({ timeout: 2000 }).catch(()=>{});
@@ -303,19 +342,25 @@ async function runOne(proxyStr, ua, idx) {
         }
         await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
       } catch (err) {
-        await logLine(`${prefix} ADSBYGOOGLE_CLICK_ERROR ${err.message}`);
+        if (!isContextClosedError(err)) {
+          await logLine(`${prefix} ADSBYGOOGLE_CLICK_ERROR ${err.message}`);
+        }
+        break;
       }
     }
+
+    if (await finishIfGclid()) return;
+
     const adFrames = allFrames.filter(f => {
       const url = f.url();
       return /googleads\.g\.doubleclick\.net|aswift_/i.test(url) || /\/ads\?/i.test(url);
     });
 
     if (adFrames.length === 0) {
-      // también intentar encontrar anchors directos dentro de la página
       const anchors = await page.$$('a.test-banner, .banner a, a[data-test="banner"]');
       if (anchors.length > 0) {
         for (const a of anchors) {
+          if (await finishIfGclid()) break;
           const delay = randInt(WAIT_MIN, WAIT_MAX);
           await page.waitForTimeout(delay);
           await a.click({ delay: 100 });
@@ -326,26 +371,26 @@ async function runOne(proxyStr, ua, idx) {
         await logLine(`${prefix} NO_BANNERS_FOUND`);
       }
     } else {
-      // dentro de cada iframe de ads, intentar click en anchors o en el centro
       for (const f of adFrames) {
+        if (await finishIfGclid()) break;
         try {
-          // 1) intentamos encontrar enlaces clickeables
           const anchors = await f.$$('a, area[href], [role="link"]');
           if (anchors && anchors.length > 0) {
-            for (const a of anchors.slice(0, 2)) { // clickeamos hasta 2 enlaces por frame
-            const delay = randInt(WAIT_MIN, WAIT_MAX);
-            await page.waitForTimeout(delay);
+            for (const a of anchors.slice(0, 2)) {
+              if (await finishIfGclid()) break;
+              const delay = randInt(WAIT_MIN, WAIT_MAX);
+              await page.waitForTimeout(delay);
               await a.click({ delay: 100 });
-            const stay = randInt(LAND_MIN, LAND_MAX);
-            await page.waitForTimeout(stay);
+              const stay = randInt(LAND_MIN, LAND_MAX);
+              await page.waitForTimeout(stay);
             }
           } else {
-            // si no hay <a>, clic en el centro del documento dentro del frame
             const box = await f.evaluate(() => {
               const el = document.documentElement || document.body;
               return { w: el.clientWidth||320, h: el.clientHeight||100 };
             }).catch(()=>null);
             if (box) {
+              if (await finishIfGclid()) break;
               const cx = Math.floor(box.w/2), cy = Math.floor(box.h/2);
               await f.click('html', { position: { x: cx, y: cy }, delay: 100 }).catch(()=>{});
               const stay = randInt(LAND_MIN, LAND_MAX);
@@ -355,7 +400,9 @@ async function runOne(proxyStr, ua, idx) {
             }
           }
         } catch (err) {
-          // ignore frame-specific errors
+          if (!isContextClosedError(err)) {
+            await logLine(`${prefix} AD_FRAME_ERROR ${err.message}`);
+          }
         }
       }
     }
