@@ -12,7 +12,7 @@ const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
-const POOL_SIZE = parseInt(process.env.POOL_SIZE || '20', 10);
+const POOL_SIZE = parseInt(process.env.POOL_SIZE || '10', 10);
 const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1500', 10);
 const WAIT_MAX = parseInt(process.env.WAIT_MAX || '4000', 10);
 const LAND_MIN = parseInt(process.env.LAND_MIN || '2500', 10);
@@ -27,6 +27,7 @@ const SCROLL_DISTANCE = parseInt(process.env.SCROLL_DISTANCE || '180', 10);
 const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '4000', 10);
 const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '12000', 10);
 const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '400', 10);
+const POST_CLICK_WAIT = parseInt(process.env.POST_CLICK_WAIT || '2500', 10);
 
 const PROXIES_FILE = process.env.PROXIES_FILE || './proxies.txt'; // cada línea: socks5h://user:pass@gate.decodo.com:7000
 const UAS_FILE = process.env.UAS_FILE || './useragents.txt';
@@ -110,7 +111,8 @@ async function logGclid(prefix, where, urlStr, ua) {
       const line = `${new Date().toISOString()} ${where} ${entries.join(' ')} page=${url.toString()}${uaInfo}\n`;
       await fs.appendFile(GCLID_LOG, line).catch(()=>{});
       if (CONSOLE_LOGS) process.stdout.write(line);
-      return { gclid: primaryValue || entries[0]?.split('=')[1] || '', url: url.toString(), where };
+      const picked = primaryValue || (entries[0] ? entries[0].split('=')[1] : '');
+      return { where, url: url.toString(), gclid: picked };
     }
   } catch {}
   return null;
@@ -128,17 +130,25 @@ async function runOne(proxyStr, ua, idx) {
   let gotGclid = false;
   let loggedGclidDone = false;
   let lastGclidInfo = null;
+  let aborted = false;
 
-  const markGclid = (where, url) => {
+  const markGclid = async (where, url) => {
     if (!gotGclid) {
-      const info = logGclid(prefix, where, url, ua);
+      const info = await logGclid(prefix, where, url, ua);
       if (info) {
-        lastGclidInfo = { where: info.where, url: info.url, gclid: info.gclid };
-      } else {
-        lastGclidInfo = { where, url, gclid: '' };
+        lastGclidInfo = info;
+        gotGclid = true;
+        if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured ${where}\n`);
+        // Close any popups and the context once a gclid is captured
+        try {
+          for (const p of page.context().pages()) {
+            if (p !== page) await p.close({ runBeforeUnload: false }).catch(()=>{});
+          }
+          await page.waitForTimeout(POST_CLICK_WAIT).catch(()=>{});
+          await page.close({ runBeforeUnload: false }).catch(()=>{});
+        } catch {}
+        aborted = true;
       }
-      gotGclid = true;
-      if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured ${where}\n`);
     }
   };
 
@@ -150,6 +160,19 @@ async function runOne(proxyStr, ua, idx) {
       return true;
     }
     return gotGclid;
+  };
+
+  const handleContextClosed = async (err, tag) => {
+    if (!isContextClosedError(err)) return false;
+    if (!gotGclid) {
+      await abortWithError(`${tag} CONTEXT_CLOSED`);
+    }
+    return true;
+  };
+
+  const abortWithError = async (msg) => {
+    aborted = true;
+    await logLine(`${prefix} ${msg}`);
   };
 
   let browser;
@@ -212,7 +235,7 @@ async function runOne(proxyStr, ua, idx) {
 
     async function waitForBanners() {
       const start = Date.now();
-      while (Date.now() - start < BANNER_WAIT_TIMEOUT) {
+      while (!aborted && !gotGclid && Date.now() - start < BANNER_WAIT_TIMEOUT) {
         const hasIns = await page.$('ins.adsbygoogle, ins[data-ad-status]');
         const hasFrames = await page.$('iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"]');
         if (hasIns || hasFrames) {
@@ -227,24 +250,24 @@ async function runOne(proxyStr, ua, idx) {
 
     // Captura gclid en popups (al hacer click en banners suelen abrir nuevas tabs)
     page.on('popup', (popup) => {
-      popup.on('framenavigated', (frame) => {
+      popup.on('framenavigated', async (frame) => {
         const u = frame.url();
-        if (u) markGclid('popup-navigate', u);
+        if (u) await markGclid('popup-navigate', u);
       });
-      popup.on('request', (req) => {
+      popup.on('request', async (req) => {
         const u = req.url();
-        if (u) markGclid('popup-request', u);
+        if (u) await markGclid('popup-request', u);
       });
     });
 
     // Captura gclid en la página principal
-    page.on('framenavigated', (frame) => {
+    page.on('framenavigated', async (frame) => {
       const u = frame.url();
-      if (u) markGclid('page-navigate', u);
+      if (u) await markGclid('page-navigate', u);
     });
-    page.on('request', (req) => {
+    page.on('request', async (req) => {
       const u = req.url();
-      if (u) markGclid('page-request', u);
+      if (u) await markGclid('page-request', u);
     });
 
     if (await finishIfGclid()) return;
@@ -261,12 +284,19 @@ async function runOne(proxyStr, ua, idx) {
 
     if (await finishIfGclid()) return;
 
+    const bannersFound = await waitForBanners();
+    if (!bannersFound && !gotGclid && !aborted) {
+      await abortWithError('NO_BANNERS_TIMEOUT');
+    }
+
+    if (await finishIfGclid() || aborted) return;
+
     for (let i = 0; i < SCROLL_ITERATIONS; i++) {
       const direction = i % 2 === 0 ? 1 : -1;
       const distance = direction * (SCROLL_DISTANCE + randInt(20, 60));
       await page.mouse.wheel(0, distance);
       await page.waitForTimeout(randInt(400, 900));
-      if (await finishIfGclid()) return;
+      if (await finishIfGclid() || aborted) return;
     }
 
     await waitForBanners();
@@ -318,7 +348,7 @@ async function runOne(proxyStr, ua, idx) {
         return null;
       }));
     for (const frame of blankFrames.filter(Boolean)) {
-      if (await finishIfGclid()) break;
+      if (await finishIfGclid() || aborted) break;
       try {
         await waitForBanners();
         const clickable = await frame.$('a, button, [role="button"], [role="link"], iframe');
@@ -330,21 +360,20 @@ async function runOne(proxyStr, ua, idx) {
             await frame.click('body, html', { delay: 150 }).catch(()=>{});
           }
         }
-        const stay = randInt(LAND_MIN, LAND_MAX);
-        await page.waitForTimeout(stay);
+        await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
       } catch (err) {
-        if (!isContextClosedError(err)) {
-          await logLine(`${prefix} BLANK_FRAME_CLICK_ERROR ${err.message}`);
-        }
+        if (await handleContextClosed(err, 'BLANK_FRAME')) break;
+        await abortWithError(`BLANK_FRAME_CLICK_ERROR ${err.message}`);
         break;
       }
+      break;
     }
 
-    if (await finishIfGclid()) return;
+    if (await finishIfGclid() || aborted) return;
 
     const adsByGoogleElements = await page.$$('ins.adsbygoogle, ins[data-ad-status], ins[class*="adsbygoogle"], ins[id*="google"]');
     for (const element of adsByGoogleElements) {
-      if (await finishIfGclid()) break;
+      if (await finishIfGclid() || aborted) break;
       try {
         await element.scrollIntoViewIfNeeded().catch(()=>{});
         await element.hover({ timeout: 2000 }).catch(()=>{});
@@ -356,14 +385,14 @@ async function runOne(proxyStr, ua, idx) {
         }
         await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
       } catch (err) {
-        if (!isContextClosedError(err)) {
-          await logLine(`${prefix} ADSBYGOOGLE_CLICK_ERROR ${err.message}`);
-        }
+        if (await handleContextClosed(err, 'ADSBYGOOGLE')) break;
+        await abortWithError(`ADSBYGOOGLE_CLICK_ERROR ${err.message}`);
         break;
       }
+      break;
     }
 
-    if (await finishIfGclid()) return;
+    if (await finishIfGclid() || aborted) return;
 
     const adFrames = allFrames.filter(f => {
       const url = f.url();
@@ -374,29 +403,29 @@ async function runOne(proxyStr, ua, idx) {
       const anchors = await page.$$('a.test-banner, .banner a, a[data-test="banner"]');
       if (anchors.length > 0) {
         for (const a of anchors) {
-          if (await finishIfGclid()) break;
+          if (await finishIfGclid() || aborted) break;
           const delay = randInt(WAIT_MIN, WAIT_MAX);
           await page.waitForTimeout(delay);
           await a.click({ delay: 100 });
-          const stay = randInt(LAND_MIN, LAND_MAX);
-          await page.waitForTimeout(stay);
+          await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
+          break;
         }
       } else {
         await logLine(`${prefix} NO_BANNERS_FOUND`);
       }
     } else {
       for (const f of adFrames) {
-        if (await finishIfGclid()) break;
+        if (await finishIfGclid() || aborted) break;
         try {
           const anchors = await f.$$('a, area[href], [role="link"]');
           if (anchors && anchors.length > 0) {
-            for (const a of anchors.slice(0, 2)) {
-              if (await finishIfGclid()) break;
+            for (const a of anchors.slice(0, 1)) {
+              if (await finishIfGclid() || aborted) break;
               const delay = randInt(WAIT_MIN, WAIT_MAX);
               await page.waitForTimeout(delay);
               await a.click({ delay: 100 });
-              const stay = randInt(LAND_MIN, LAND_MAX);
-              await page.waitForTimeout(stay);
+              await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
+              break;
             }
           } else {
             const box = await f.evaluate(() => {
@@ -404,32 +433,36 @@ async function runOne(proxyStr, ua, idx) {
               return { w: el.clientWidth||320, h: el.clientHeight||100 };
             }).catch(()=>null);
             if (box) {
-              if (await finishIfGclid()) break;
+              if (await finishIfGclid() || aborted) break;
               const cx = Math.floor(box.w/2), cy = Math.floor(box.h/2);
               await f.click('html', { position: { x: cx, y: cy }, delay: 100 }).catch(()=>{});
-              const stay = randInt(LAND_MIN, LAND_MAX);
-              await page.waitForTimeout(stay);
+              await page.waitForTimeout(randInt(LAND_MIN, LAND_MAX));
             } else {
               await clickFrameElement(f);
             }
           }
         } catch (err) {
-          if (!isContextClosedError(err)) {
-            await logLine(`${prefix} AD_FRAME_ERROR ${err.message}`);
-          }
+          if (await handleContextClosed(err, 'AD_FRAME')) break;
+          await abortWithError(`AD_FRAME_ERROR ${err.message}`);
         }
+        break;
       }
     }
 
-    await logLine(`${prefix} OK`);
+    if (!aborted) await logLine(`${prefix} OK`);
 
-    if (SHOW_BROWSER && DEBUG_STAY_OPEN > 0) {
+    if (SHOW_BROWSER && DEBUG_STAY_OPEN > 0 && !aborted) {
       await page.waitForTimeout(DEBUG_STAY_OPEN);
     }
   } catch (err) {
-    await logLine(`${prefix} ERROR ${err.message}`);
+    if (!(await handleContextClosed(err, 'RUN'))) {
+      await abortWithError(`ERROR ${err.message}`);
+    }
   } finally {
     try { if (browser) await browser.close(); } catch {}
+    if (!gotGclid && !aborted) {
+      await logLine(`${prefix} RESTART`);
+    }
   }
 }
 
