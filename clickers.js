@@ -12,22 +12,22 @@ const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
-const POOL_SIZE = parseInt(process.env.POOL_SIZE || '10', 10);
-const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1500', 10);
-const WAIT_MAX = parseInt(process.env.WAIT_MAX || '4000', 10);
-const LAND_MIN = parseInt(process.env.LAND_MIN || '2500', 10);
-const LAND_MAX = parseInt(process.env.LAND_MAX || '6000', 10);
+const POOL_SIZE = parseInt(process.env.POOL_SIZE || '12', 10);
+const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1000', 10);
+const WAIT_MAX = parseInt(process.env.WAIT_MAX || '2500', 10);
+const LAND_MIN = parseInt(process.env.LAND_MIN || '1500', 10);
+const LAND_MAX = parseInt(process.env.LAND_MAX || '3000', 10);
 const LOG_FILE = process.env.LOG_FILE || './clicks.log';
 const GCLID_LOG = process.env.GCLID_LOG || './gclids.log';
 const CONSOLE_LOGS = (process.env.CONSOLE_LOGS || '1') === '1';
-const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '2000', 10);
-const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '5000', 10);
+const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '1500', 10);
+const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '4000', 10);
 const SCROLL_ITERATIONS = parseInt(process.env.SCROLL_ITERATIONS || '2', 10);
 const SCROLL_DISTANCE = parseInt(process.env.SCROLL_DISTANCE || '180', 10);
 const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '4000', 10);
-const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '12000', 10);
-const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '400', 10);
-const POST_CLICK_WAIT = parseInt(process.env.POST_CLICK_WAIT || '2500', 10);
+const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '9000', 10);
+const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '350', 10);
+const POST_CLICK_WAIT = parseInt(process.env.POST_CLICK_WAIT || '1500', 10);
 
 const PROXIES_FILE = process.env.PROXIES_FILE || './proxies.txt'; // cada línea: socks5h://user:pass@gate.decodo.com:7000
 const UAS_FILE = process.env.UAS_FILE || './useragents.txt';
@@ -228,6 +228,17 @@ async function runOne(proxyStr, ua, idx) {
       viewport: { width: 1280, height: 720 },
       locale: 'en-US',
       timezoneId: 'UTC'
+    });
+
+    await context.route('**/*', (route) => {
+      const request = route.request();
+      const type = request.resourceType();
+      const url = request.url();
+      const allowAds = /googleads\.g\.doubleclick\.net|doubleclick\.net|googleadservices\.com/i.test(url);
+      if (!allowAds && (type === 'image' || type === 'media' || type === 'font')) {
+        return route.abort();
+      }
+      return route.continue();
     });
 
     const page = await context.newPage();
