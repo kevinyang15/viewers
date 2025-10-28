@@ -1,5 +1,9 @@
-const fs = require('fs/promises');
-const path = require('path');
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
   const logPath = process.argv[2] || path.resolve(__dirname, 'gclids.log');
@@ -19,13 +23,12 @@ async function main() {
   for (const line of lines) {
     const match = line.match(regex);
     if (match) {
-      const gclidEntry = match[1].split('=')[1];
-      const current = counts.get(gclidEntry) || 0;
-      counts.set(gclidEntry, current + 1);
+      const gclidValue = match[1].split('=')[1];
+      counts.set(gclidValue, (counts.get(gclidValue) || 0) + 1);
     }
   }
 
-  console.log(`Total de líneas con gclid: ${counts.size}`);
+  console.log(`Total de gclid únicos: ${counts.size}`);
   for (const [gclid, count] of counts.entries()) {
     console.log(`${gclid} -> ${count}`);
   }
