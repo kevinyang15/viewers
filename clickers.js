@@ -120,22 +120,25 @@ async function runOne(proxyStr, ua, idx) {
   const prefix = `[port:${proxyPort} #${idx}]`;
   let gotGclid = false;
   let loggedGclidDone = false;
-
-  const finishIfGclid = async () => {
-    if (gotGclid && !loggedGclidDone) {
-      loggedGclidDone = true;
-      await logLine(`${prefix} gclid_done`);
-      return true;
-    }
-    return gotGclid;
-  };
+  let lastGclidInfo = null;
 
   const markGclid = (where, url) => {
     if (!gotGclid) {
       gotGclid = true;
+      lastGclidInfo = { where, url };
       logGclid(prefix, where, url);
-      if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured\n`);
+      if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured ${where}\n`);
     }
+  };
+
+  const finishIfGclid = async () => {
+    if (gotGclid && !loggedGclidDone) {
+      loggedGclidDone = true;
+      const detail = lastGclidInfo ? `${lastGclidInfo.where} ${lastGclidInfo.url}` : '';
+      await logLine(`${prefix} gclid_done ${detail}`);
+      return true;
+    }
+    return gotGclid;
   };
 
   let browser;
