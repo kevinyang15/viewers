@@ -184,9 +184,7 @@ async function runOne(proxyStr, ua, idx) {
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
-        '--autoplay-policy=no-user-gesture-required',
-        '--disable-gpu',
-        '--blink-settings=imagesEnabled=false'
+        '--autoplay-policy=no-user-gesture-required'
       ]
     };
     if (SHOW_BROWSER && DEBUG_SLOWMO > 0) {
@@ -230,18 +228,6 @@ async function runOne(proxyStr, ua, idx) {
       viewport: { width: 1280, height: 720 },
       locale: 'en-US',
       timezoneId: 'UTC'
-    });
-
-    await context.route('**/*', (route) => {
-      const type = route.request().resourceType();
-      if (type === 'image' || type === 'media' || type === 'font') {
-        return route.abort();
-      }
-      const url = route.request().url();
-      if (/\.css$|\/css\b/i.test(url)) {
-        return route.abort();
-      }
-      return route.continue();
     });
 
     const page = await context.newPage();
