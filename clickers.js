@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import pLimit from 'p-limit';
 
 const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
-const SHOW_BROWSER = (process.env.SHOW_BROWSER || '0') === '1';
+const SHOW_BROWSER = (process.env.SHOW_BROWSER || '1') === '1';
 const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
@@ -184,7 +184,9 @@ async function runOne(proxyStr, ua, idx) {
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
-        '--autoplay-policy=no-user-gesture-required'
+        '--autoplay-policy=no-user-gesture-required',
+        '--disable-gpu',
+        '--blink-settings=imagesEnabled=false'
       ]
     };
     if (SHOW_BROWSER && DEBUG_SLOWMO > 0) {
@@ -230,7 +232,20 @@ async function runOne(proxyStr, ua, idx) {
       timezoneId: 'UTC'
     });
 
+    await context.route('**/*', (route) => {
+      const type = route.request().resourceType();
+      if (type === 'image' || type === 'media' || type === 'font') {
+        return route.abort();
+      }
+      const url = route.request().url();
+      if (/\.css$|\/css\b/i.test(url)) {
+        return route.abort();
+      }
+      return route.continue();
+    });
+
     const page = await context.newPage();
+
     const seenIds = new Set();
 
     async function waitForBanners() {
