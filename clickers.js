@@ -91,22 +91,29 @@ async function logLine(line) {
   if (CONSOLE_LOGS) process.stdout.write(l);
 }
 
-async function logGclid(prefix, where, urlStr) {
+async function logGclid(prefix, where, urlStr, ua) {
   try {
     const url = new URL(urlStr);
     const params = url.searchParams;
     const keys = ['gclid', 'gclsrc', 'gbraid', 'wbraid', 'yclid', 'msclkid', 'fbclid'];
     const entries = [];
+    let primaryValue = '';
     for (const k of keys) {
       const v = params.get(k);
-      if (v) entries.push(`${k}=${v}`);
+      if (v) {
+        entries.push(`${k}=${v}`);
+        if (!primaryValue && k === 'gclid') primaryValue = v;
+      }
     }
     if (entries.length > 0) {
-      const line = `${new Date().toISOString()} ${where} ${entries.join(' ')}\n`;
+      const uaInfo = ua ? ` ua="${ua}"` : '';
+      const line = `${new Date().toISOString()} ${where} ${entries.join(' ')} page=${url.toString()}${uaInfo}\n`;
       await fs.appendFile(GCLID_LOG, line).catch(()=>{});
       if (CONSOLE_LOGS) process.stdout.write(line);
+      return { gclid: primaryValue || entries[0]?.split('=')[1] || '', url: url.toString(), where };
     }
   } catch {}
+  return null;
 }
 
 async function runOne(proxyStr, ua, idx) {
@@ -124,9 +131,13 @@ async function runOne(proxyStr, ua, idx) {
 
   const markGclid = (where, url) => {
     if (!gotGclid) {
+      const info = logGclid(prefix, where, url, ua);
+      if (info) {
+        lastGclidInfo = { where: info.where, url: info.url, gclid: info.gclid };
+      } else {
+        lastGclidInfo = { where, url, gclid: '' };
+      }
       gotGclid = true;
-      lastGclidInfo = { where, url };
-      logGclid(prefix, where, url);
       if (CONSOLE_LOGS) process.stdout.write(`${prefix} gclid_captured ${where}\n`);
     }
   };
@@ -134,7 +145,7 @@ async function runOne(proxyStr, ua, idx) {
   const finishIfGclid = async () => {
     if (gotGclid && !loggedGclidDone) {
       loggedGclidDone = true;
-      const detail = lastGclidInfo ? `${lastGclidInfo.where} ${lastGclidInfo.url}` : '';
+      const detail = lastGclidInfo ? `${lastGclidInfo.where} gclid=${lastGclidInfo.gclid} page=${lastGclidInfo.url}` : '';
       await logLine(`${prefix} gclid_done ${detail}`);
       return true;
     }
