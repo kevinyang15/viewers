@@ -12,21 +12,21 @@ const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
 const POOL_SIZE = parseInt(process.env.POOL_SIZE || '0', 10);
-const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1000', 10);
-const WAIT_MAX = parseInt(process.env.WAIT_MAX || '2500', 10);
-const LAND_MIN = parseInt(process.env.LAND_MIN || '1500', 10);
-const LAND_MAX = parseInt(process.env.LAND_MAX || '3000', 10);
+const WAIT_MIN = parseInt(process.env.WAIT_MIN || '150', 10);
+const WAIT_MAX = parseInt(process.env.WAIT_MAX || '350', 10);
+const LAND_MIN = parseInt(process.env.LAND_MIN || '300', 10);
+const LAND_MAX = parseInt(process.env.LAND_MAX || '700', 10);
 const LOG_FILE = process.env.LOG_FILE || './clicks.log';
 const GCLID_LOG = process.env.GCLID_LOG || './gclids.log';
 const CONSOLE_LOGS = (process.env.CONSOLE_LOGS || '1') === '1';
-const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '1500', 10);
-const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '4000', 10);
+const AD_WAIT_MIN = parseInt(process.env.AD_WAIT_MIN || '80', 10);
+const AD_WAIT_MAX = parseInt(process.env.AD_WAIT_MAX || '180', 10);
 const SCROLL_ITERATIONS = parseInt(process.env.SCROLL_ITERATIONS || '2', 10);
 const SCROLL_DISTANCE = parseInt(process.env.SCROLL_DISTANCE || '180', 10);
-const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '4000', 10);
-const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '9000', 10);
-const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '350', 10);
-const POST_CLICK_WAIT = parseInt(process.env.POST_CLICK_WAIT || '1500', 10);
+const AD_FRAME_WAIT = parseInt(process.env.AD_FRAME_WAIT || '2200', 10);
+const BANNER_WAIT_TIMEOUT = parseInt(process.env.BANNER_WAIT_TIMEOUT || '4200', 10);
+const BANNER_WAIT_POLL = parseInt(process.env.BANNER_WAIT_POLL || '120', 10);
+const POST_CLICK_WAIT = parseInt(process.env.POST_CLICK_WAIT || '500', 10);
 
 const PROXIES_FILE = process.env.PROXIES_FILE || './proxies.txt'; // cada línea: socks5h://user:pass@gate.decodo.com:7000
 const UAS_FILE = process.env.UAS_FILE || './useragents.txt';
@@ -280,18 +280,17 @@ async function runOne(proxyStr, ua, idx) {
     const page = await context.newPage();
 
     async function waitForBanners() {
-      const start = Date.now();
-      while (!aborted && !gotGclid && Date.now() - start < BANNER_WAIT_TIMEOUT) {
-        const hasIns = await page.$('ins.adsbygoogle, ins[data-ad-status]');
-        const hasFrames = await page.$('iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"]');
-        if (hasIns || hasFrames) {
-          if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_detected\n`);
-          return true;
-        }
-        await page.waitForTimeout(BANNER_WAIT_POLL);
+      try {
+        await page.waitForSelector(
+          'ins.adsbygoogle, ins[data-ad-status], iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"], div[class*="adsbygoogle"], div[data-ad-client]',
+          { timeout: BANNER_WAIT_TIMEOUT }
+        );
+        if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_detected\n`);
+        return true;
+      } catch {
+        if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_timeout\n`);
+        return false;
       }
-      if (CONSOLE_LOGS) process.stdout.write(`${prefix} banners_timeout\n`);
-      return false;
     }
 
     // Captura gclid en popups (al hacer click en banners suelen abrir nuevas tabs)
@@ -357,11 +356,28 @@ async function runOne(proxyStr, ua, idx) {
       return gotGclid;
     }
 
-    async function clickBoundingBox(handle, label, positionFn) {
+    async function clickBoundingBox(handle, label, positionOrOptions, maybeOptions) {
       try {
         const box = await handle.boundingBox();
         if (!box) return { clicked: false, gclid: false };
         await handle.scrollIntoViewIfNeeded().catch(()=>{});
+        let positionFn;
+        let options;
+        if (typeof positionOrOptions === 'function' || positionOrOptions === undefined) {
+          positionFn = positionOrOptions;
+          options = maybeOptions || {};
+        } else {
+          options = positionOrOptions || {};
+          positionFn = undefined;
+        }
+        const {
+          timeout = AD_FRAME_WAIT,
+          waitAfter = randInt(AD_WAIT_MIN, AD_WAIT_MAX),
+          postClickWait = POST_CLICK_WAIT,
+          minDelay = 50,
+          maxDelay = 120
+        } = options;
+
         let relX;
         let relY;
         if (typeof positionFn === 'function') {
@@ -379,22 +395,29 @@ async function runOne(proxyStr, ua, idx) {
         }
         relX = Math.max(2, Math.min(box.width - 2, relX));
         relY = Math.max(2, Math.min(box.height - 2, relY));
-        const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT }).catch(()=>null);
-        const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT }).catch(()=>null);
-        await handle.click({ delay: 120, position: { x: relX, y: relY } }).catch(async () => {
+        let navigated = false;
+        let popupOpened = false;
+        let timedOut = false;
+        const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout })
+          .then(() => { navigated = true; return true; })
+          .catch(()=>null);
+        const popupPromise = page.waitForEvent('popup', { timeout })
+          .then(() => { popupOpened = true; return true; })
+          .catch(()=>null);
+        const waiters = [navPromise, popupPromise];
+        if (waitAfter > 0) {
+          waiters.push(page.waitForTimeout(waitAfter).then(() => { timedOut = true; return null; }).catch(()=>null));
+        }
+        await handle.click({ delay: randInt(minDelay, maxDelay), position: { x: relX, y: relY } }).catch(async () => {
           const x = Math.round(box.x + relX);
           const y = Math.round(box.y + relY);
-          await page.mouse.move(x, y, { steps: 6 }).catch(()=>{});
-          await page.mouse.click(x, y, { delay: 120 }).catch(()=>{});
+          await page.mouse.move(x, y, { steps: 4 }).catch(()=>{});
+          await page.mouse.click(x, y, { delay: randInt(minDelay, maxDelay) }).catch(()=>{});
         });
-        await Promise.race([
-          navPromise,
-          popupPromise,
-          page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX)).catch(()=>null)
-        ]).catch(()=>null);
+        await Promise.race(waiters).catch(()=>null);
         await logLine(`${prefix} banner_click ${label}`);
-        const captured = await waitForGclid(AD_FRAME_WAIT + POST_CLICK_WAIT);
-        return { clicked: true, gclid: captured };
+        const captured = await waitForGclid(timeout + postClickWait);
+        return { clicked: true, gclid: captured, navigated, popupOpened, timedOut };
       } catch (err) {
         await logLine(`${prefix} banner_click_error ${label} ${err.message}`);
         return { clicked: false, gclid: false };
@@ -420,8 +443,14 @@ async function runOne(proxyStr, ua, idx) {
               el.removeAttribute('target');
             }
           }).catch(()=>{});
-          const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT }).catch(()=>null);
-          const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT }).catch(()=>null);
+          let navigated = false;
+          let popupOpened = false;
+          const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT })
+            .then(() => { navigated = true; return true; })
+            .catch(()=>null);
+          const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT })
+            .then(() => { popupOpened = true; return true; })
+            .catch(()=>null);
           await target.click({ delay: 120 }).catch(()=>{});
           await Promise.race([
             navPromise,
@@ -430,10 +459,16 @@ async function runOne(proxyStr, ua, idx) {
           ]).catch(()=>null);
           await logLine(`${prefix} frame_anchor_click ${label}`);
           const captured = await waitForGclid(AD_FRAME_WAIT + POST_CLICK_WAIT);
-          return { clicked: true, gclid: captured };
+          return { clicked: true, gclid: captured, navigated, popupOpened };
         }
-        const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT }).catch(()=>null);
-        const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT }).catch(()=>null);
+        let navigated = false;
+        let popupOpened = false;
+        const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT })
+          .then(() => { navigated = true; return true; })
+          .catch(()=>null);
+        const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT })
+          .then(() => { popupOpened = true; return true; })
+          .catch(()=>null);
         await frame.click('body, html', { delay: 120 }).catch(()=>{});
         await Promise.race([
           navPromise,
@@ -442,7 +477,7 @@ async function runOne(proxyStr, ua, idx) {
         ]).catch(()=>null);
         await logLine(`${prefix} frame_generic_click ${label}`);
         const captured = await waitForGclid(AD_FRAME_WAIT + POST_CLICK_WAIT);
-        return { clicked: true, gclid: captured };
+        return { clicked: true, gclid: captured, navigated, popupOpened };
       } catch (err) {
         await logLine(`${prefix} frame_click_error ${label} ${err.message}`);
         return { clicked: false, gclid: false };
@@ -462,6 +497,8 @@ async function runOne(proxyStr, ua, idx) {
 
     async function clickFirstBanner() {
       let attempts = 0;
+      let clickedWithoutGclid = false;
+      let clickAttemptFailed = false;
       async function clickBottomBanner() {
         const anchorSelectors = [
           'ins.adsbygoogle[data-anchor-status="displayed"]',
@@ -471,6 +508,57 @@ async function runOne(proxyStr, ua, idx) {
           'div[id^="aswift_"][id$="_host"][style*="position: fixed"][style*="bottom"]'
         ];
         const anchorFrameSelectors = 'iframe[id*="anchor"], iframe[name*="anchor"], iframe[src*="anchor"], iframe[style*="position: fixed"][style*="bottom"], div[id^="google_ads_iframe_"][style*="position: fixed"][style*="bottom"] iframe';
+
+        async function clickTextualContent(targetHandle, baseLabel, maxClicks) {
+          try {
+            const selectors = ['a', 'button', '[role="button"]', '[onclick]', '[data-href]', '[data-url]', '[data-link]', '[href]'];
+            const nodes = [];
+            for (const selector of selectors) {
+              const matches = await targetHandle.$$(selector).catch(()=>[]);
+              if (matches && matches.length) nodes.push(...matches);
+            }
+            if (nodes.length === 0) return null;
+            const results = [];
+            const seenTexts = new Set();
+            let clicks = 0;
+            for (const node of nodes) {
+              if (clicks >= maxClicks) break;
+              let text = '';
+              try {
+                text = await node.evaluate((el) => (el?.innerText || el?.textContent || '').replace(/\s+/g, ' ').trim());
+              } catch {
+                await node.dispose?.().catch(()=>{});
+                return null;
+              }
+              if (!text) {
+                await node.dispose?.().catch(()=>{});
+                continue;
+              }
+              const key = text.toLowerCase();
+              if (seenTexts.has(key)) {
+                await node.dispose?.().catch(()=>{});
+                continue;
+              }
+              seenTexts.add(key);
+              clicks += 1;
+              const labelText = text.length > 40 ? `${text.slice(0, 37)}…` : text;
+              const res = await clickBoundingBox(node, `${baseLabel}|text:${labelText}`, {
+                timeout: Math.min(AD_FRAME_WAIT, 1500),
+                waitAfter: 100,
+                postClickWait: 200,
+                minDelay: 28,
+                maxDelay: 60
+              });
+              results.push({ ...res, text });
+              await node.dispose?.().catch(()=>{});
+              if (!res.clicked || res.gclid) break;
+            }
+            if (results.length === 0) return null;
+            return { results };
+          } catch {
+            return null;
+          }
+        }
 
         try {
           await page.evaluate(() => {
@@ -505,30 +593,94 @@ async function runOne(proxyStr, ua, idx) {
         for (const candidate of candidates) {
           const { handle, label } = candidate;
           if (!handle) continue;
-          if (await finishIfGclid() || aborted) return { attempted: 0, gclid: true };
+          if (await finishIfGclid() || aborted) {
+            return { attempted: 0, gclid: true, clickedWithoutGclid, clickAttemptFailed };
+          }
           const preferred = await preferIframeHandle(handle);
           if (!preferred) continue;
-          const result = await clickBoundingBox(preferred, label, (box) => {
-            const jitterRange = Math.max(5, Math.min(45, Math.floor(box.width / 4) || 0));
-            const jitterX = randInt(-jitterRange, jitterRange);
-            const offsetY = randInt(4, Math.max(6, Math.min(24, Math.floor(box.height / 2) || 0)));
-            return {
-              x: box.width / 2 + jitterX,
-              y: Math.max(2, box.height - offsetY)
-            };
-          });
-          if (result.clicked) {
-            return { attempted: 1, gclid: result.gclid, via: label };
+          let localAttempts = 0;
+          let localRedirect = false;
+          const maxRapidClicks = Math.max(5, parseInt(process.env.BOTTOM_MULTI_CLICKS || '5', 10));
+          const fractions = [0.18, 0.36, 0.54, 0.72, 0.5];
+          const rapidResults = [];
+
+          const textClicks = await clickTextualContent(preferred, label, maxRapidClicks);
+          if (textClicks && textClicks.results) {
+            const textResults = textClicks.results.filter(Boolean);
+            const clickedTextCount = textResults.filter(r => r.clicked).length;
+            if (clickedTextCount > 0) localAttempts += clickedTextCount;
+            const textRedirect = textResults.some(r => r.navigated || r.popupOpened);
+            if (textRedirect) localRedirect = true;
+            const textGclid = textResults.some(r => r.gclid);
+            if (textGclid) {
+              return { attempted: localAttempts, gclid: true, via: `${label}|text`, clickedWithoutGclid, clickAttemptFailed };
+            }
+            if (textResults.some(r => !r.clicked)) {
+              clickAttemptFailed = true;
+              if (!textRedirect && !gotGclid) clickedWithoutGclid = true;
+              return { attempted: localAttempts, gclid: gotGclid, via: `${label}|text`, clickedWithoutGclid, clickAttemptFailed };
+            }
+            if (!textRedirect && !gotGclid && clickedTextCount > 0) {
+              clickedWithoutGclid = true;
+              clickAttemptFailed = true;
+              return { attempted: localAttempts, gclid: gotGclid, via: `${label}|text`, clickedWithoutGclid, clickAttemptFailed };
+            }
           }
+
+          for (let i = 0; i < maxRapidClicks; i += 1) {
+            const fraction = fractions[i % fractions.length];
+            const result = await clickBoundingBox(preferred, `${label}#${i + 1}`, (box) => {
+              const jitterX = randInt(-Math.max(6, Math.floor(box.width * 0.06)), Math.max(6, Math.floor(box.width * 0.06)));
+              const offsetY = randInt(3, Math.max(6, Math.min(20, Math.floor(box.height * 0.25) || 0)));
+              const targetX = box.width * fraction + jitterX;
+              const targetY = box.height - offsetY;
+              return {
+                x: Math.max(2, Math.min(box.width - 2, targetX)),
+                y: Math.max(2, Math.min(box.height - 2, targetY))
+              };
+            }, {
+              timeout: Math.min(AD_FRAME_WAIT, 1600),
+              waitAfter: 110,
+              postClickWait: 220,
+              minDelay: 35,
+              maxDelay: 75
+            });
+            rapidResults.push(result);
+            if (!result.clicked) {
+              clickAttemptFailed = true;
+              return { attempted: localAttempts + i, gclid: gotGclid, clickedWithoutGclid, clickAttemptFailed: true };
+            }
+            if (result.gclid || gotGclid) {
+              return { attempted: localAttempts + i + 1, gclid: true, via: label, clickedWithoutGclid, clickAttemptFailed };
+            }
+            if (gotGclid) {
+              return { attempted: localAttempts + i + 1, gclid: true, via: label, clickedWithoutGclid, clickAttemptFailed };
+            }
+          }
+          const anyRedirect = localRedirect || rapidResults.some(r => r && (r.navigated || r.popupOpened));
+          if (!gotGclid && !anyRedirect) {
+            clickedWithoutGclid = true;
+            clickAttemptFailed = true;
+          }
+          const clickedCount = rapidResults.filter(r => r && r.clicked).length;
+          const totalAttempts = localAttempts + clickedCount;
+          return { attempted: totalAttempts, gclid: gotGclid, via: label, clickedWithoutGclid, clickAttemptFailed };
         }
 
-        return { attempted: 0, gclid: false };
+        return { attempted: 0, gclid: false, clickedWithoutGclid, clickAttemptFailed };
       }
 
       const bottomResult = await clickBottomBanner();
       attempts += bottomResult.attempted;
+      if (bottomResult.clickAttemptFailed) clickAttemptFailed = true;
       if (bottomResult.gclid || gotGclid) {
-        return { attempted: attempts, gclid: true, via: bottomResult.via || 'bottom-anchor' };
+        return {
+          attempted: attempts,
+          gclid: true,
+          via: bottomResult.via || 'bottom-anchor',
+          clickedWithoutGclid,
+          clickAttemptFailed
+        };
       }
       const primarySelectors = [
         'iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"], iframe[id*="google_ads"]',
@@ -541,7 +693,9 @@ async function runOne(proxyStr, ua, idx) {
       for (const selector of primarySelectors) {
         const handles = await page.$$(selector);
         for (const handle of handles) {
-          if (await finishIfGclid() || aborted) return { attempted: attempts, gclid: true };
+          if (await finishIfGclid() || aborted) {
+            return { attempted: attempts, gclid: true, clickedWithoutGclid, clickAttemptFailed };
+          }
           const preferred = await preferIframeHandle(handle);
           if (!preferred) continue;
           await preferred.evaluate((el) => {
@@ -553,8 +707,13 @@ async function runOne(proxyStr, ua, idx) {
           if (result.clicked) {
             attempts += 1;
             if (result.gclid || gotGclid) {
-              return { attempted: attempts, gclid: true, via: selector };
+              return { attempted: attempts, gclid: true, via: selector, clickedWithoutGclid, clickAttemptFailed };
             }
+            const hadRedirect = !!(result.navigated || result.popupOpened);
+            if (!result.gclid && !gotGclid && !hadRedirect) clickedWithoutGclid = true;
+          } else {
+            clickAttemptFailed = true;
+            return { attempted: attempts, gclid: gotGclid, clickedWithoutGclid, clickAttemptFailed: true };
           }
         }
       }
@@ -582,14 +741,22 @@ async function runOne(proxyStr, ua, idx) {
         }));
 
       for (const frame of blankFrames.filter(Boolean)) {
-        if (await finishIfGclid() || aborted) return { attempted: attempts, gclid: true };
+        if (await finishIfGclid() || aborted) {
+          return { attempted: attempts, gclid: true, clickedWithoutGclid, clickAttemptFailed };
+        }
         try {
           await page.waitForTimeout(randInt(AD_WAIT_MIN, AD_WAIT_MAX)).catch(()=>{});
           const clickable = await frame.$('a, button, [role="button"], [role="link"], iframe');
           let result = { clicked: false, gclid: false };
           if (clickable) {
-            const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT }).catch(()=>null);
-            const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT }).catch(()=>null);
+            let navigated = false;
+            let popupOpened = false;
+            const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT })
+              .then(() => { navigated = true; return true; })
+              .catch(()=>null);
+            const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT })
+              .then(() => { popupOpened = true; return true; })
+              .catch(()=>null);
             await clickable.click({ delay: 150 }).catch(()=>{});
             await Promise.race([
               navPromise,
@@ -598,7 +765,7 @@ async function runOne(proxyStr, ua, idx) {
             ]).catch(()=>null);
             await logLine(`${prefix} blank_frame_click`);
             const captured = await waitForGclid(AD_FRAME_WAIT + POST_CLICK_WAIT);
-            result = { clicked: true, gclid: captured };
+            result = { clicked: true, gclid: captured, navigated, popupOpened };
           } else {
             const frameEl = await frame.frameElement().catch(()=>null);
             if (frameEl) {
@@ -610,8 +777,13 @@ async function runOne(proxyStr, ua, idx) {
           if (result.clicked) {
             attempts += 1;
             if (result.gclid || gotGclid) {
-              return { attempted: attempts, gclid: true, via: 'blank-frame' };
+              return { attempted: attempts, gclid: true, via: 'blank-frame', clickedWithoutGclid, clickAttemptFailed };
             }
+            const hadRedirect = !!(result.navigated || result.popupOpened);
+            if (!result.gclid && !gotGclid && !hadRedirect) clickedWithoutGclid = true;
+          } else {
+            clickAttemptFailed = true;
+            return { attempted: attempts, gclid: gotGclid, clickedWithoutGclid, clickAttemptFailed: true };
           }
         } catch (err) {
           if (await handleContextClosed(err, 'BLANK_FRAME')) break;
@@ -625,22 +797,44 @@ async function runOne(proxyStr, ua, idx) {
         return /googleads\.g\.doubleclick\.net|aswift_|adsystem|doubleclick|pagead\//i.test(url);
       });
       for (const frame of frames) {
-        if (await finishIfGclid() || aborted) return { attempted: attempts, gclid: true };
+        if (await finishIfGclid() || aborted) {
+          return { attempted: attempts, gclid: true, clickedWithoutGclid, clickAttemptFailed };
+        }
         const result = await clickFrame(frame, frame.url() || 'frame');
         if (result.clicked) {
           attempts += 1;
           if (result.gclid || gotGclid) {
-            return { attempted: attempts, gclid: true, via: 'frame' };
+            return { attempted: attempts, gclid: true, via: 'frame', clickedWithoutGclid, clickAttemptFailed };
           }
+          const hadRedirect = !!(result.navigated || result.popupOpened);
+          if (!result.gclid && !gotGclid && !hadRedirect) clickedWithoutGclid = true;
+        } else {
+          clickAttemptFailed = true;
+          return { attempted: attempts, gclid: gotGclid, clickedWithoutGclid, clickAttemptFailed: true };
         }
       }
 
-      return { attempted: attempts, gclid: gotGclid };
+      return { attempted: attempts, gclid: gotGclid, clickedWithoutGclid, clickAttemptFailed };
     }
 
     const clickOutcome = await clickFirstBanner();
     if (clickOutcome.attempted === 0 && !gotGclid) {
       if (!aborted) await abortWithError('BANNER_CLICK_FAILED');
+      return;
+    }
+
+    if (clickOutcome.clickAttemptFailed) {
+      if (!aborted) await abortWithError('BANNER_CLICK_ATTEMPT_FAILED');
+      return;
+    }
+
+    if (clickOutcome.clickedWithoutGclid) {
+      if (!aborted) await abortWithError('BANNER_CLICK_NO_REDIRECT_GCLID');
+      return;
+    }
+
+    if (!clickOutcome.gclid && clickOutcome.attempted > 0) {
+      if (!aborted) await abortWithError('BANNER_CLICK_NO_GCLID');
       return;
     }
 
