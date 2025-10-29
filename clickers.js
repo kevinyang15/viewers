@@ -6,12 +6,12 @@ import path from 'path';
 import { chromium } from 'playwright';
 
 const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
-const SHOW_BROWSER = (process.env.SHOW_BROWSER || '0') === '1';
+const SHOW_BROWSER = (process.env.SHOW_BROWSER || '1') === '1';
 const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
 const HEADLESS = SHOW_BROWSER ? false : (process.env.HEADLESS || '1') === '1';
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL || 'chrome';
-const POOL_SIZE = parseInt(process.env.POOL_SIZE || '1', 10);
+const POOL_SIZE = parseInt(process.env.POOL_SIZE || '0', 10);
 const WAIT_MIN = parseInt(process.env.WAIT_MIN || '1000', 10);
 const WAIT_MAX = parseInt(process.env.WAIT_MAX || '2500', 10);
 const LAND_MIN = parseInt(process.env.LAND_MIN || '1500', 10);
@@ -357,15 +357,28 @@ async function runOne(proxyStr, ua, idx) {
       return gotGclid;
     }
 
-    async function clickBoundingBox(handle, label) {
+    async function clickBoundingBox(handle, label, positionFn) {
       try {
         const box = await handle.boundingBox();
         if (!box) return { clicked: false, gclid: false };
         await handle.scrollIntoViewIfNeeded().catch(()=>{});
-        const jitterX = randInt(-10, 10);
-        const jitterY = randInt(-10, 10);
-        const relX = Math.max(2, Math.min(box.width - 2, box.width / 2 + jitterX));
-        const relY = Math.max(2, Math.min(box.height - 2, box.height / 2 + jitterY));
+        let relX;
+        let relY;
+        if (typeof positionFn === 'function') {
+          const custom = positionFn(box) || {};
+          if (Number.isFinite(custom.x) && Number.isFinite(custom.y)) {
+            relX = custom.x;
+            relY = custom.y;
+          }
+        }
+        if (!Number.isFinite(relX) || !Number.isFinite(relY)) {
+          const jitterX = randInt(-10, 10);
+          const jitterY = randInt(-10, 10);
+          relX = box.width / 2 + jitterX;
+          relY = box.height / 2 + jitterY;
+        }
+        relX = Math.max(2, Math.min(box.width - 2, relX));
+        relY = Math.max(2, Math.min(box.height - 2, relY));
         const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: AD_FRAME_WAIT }).catch(()=>null);
         const popupPromise = page.waitForEvent('popup', { timeout: AD_FRAME_WAIT }).catch(()=>null);
         await handle.click({ delay: 120, position: { x: relX, y: relY } }).catch(async () => {
@@ -449,6 +462,74 @@ async function runOne(proxyStr, ua, idx) {
 
     async function clickFirstBanner() {
       let attempts = 0;
+      async function clickBottomBanner() {
+        const anchorSelectors = [
+          'ins.adsbygoogle[data-anchor-status="displayed"]',
+          'ins.adsbygoogle[data-anchor-shown="true"]',
+          'ins.adsbygoogle[style*="position: fixed"][style*="bottom"]',
+          'ins[data-anchor-status][style*="position: fixed"][style*="bottom"]',
+          'div[id^="aswift_"][id$="_host"][style*="position: fixed"][style*="bottom"]'
+        ];
+        const anchorFrameSelectors = 'iframe[id*="anchor"], iframe[name*="anchor"], iframe[src*="anchor"], iframe[style*="position: fixed"][style*="bottom"], div[id^="google_ads_iframe_"][style*="position: fixed"][style*="bottom"] iframe';
+
+        try {
+          await page.evaluate(() => {
+            try {
+              window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+            } catch {
+              window.scrollTo(0, document.body.scrollHeight);
+            }
+          });
+        } catch {}
+        await page.waitForTimeout(randInt(250, 450)).catch(()=>{});
+
+        const candidates = [];
+        for (const selector of anchorSelectors) {
+          const found = await page.$$(selector);
+          for (const handle of found) {
+            candidates.push({ handle, label: `bottom-anchor:${selector}` });
+          }
+          if (found.length === 0) {
+            try {
+              const awaited = await page.waitForSelector(selector, { state: 'visible', timeout: 2500 });
+              if (awaited) candidates.push({ handle: awaited, label: `bottom-anchor:${selector}` });
+            } catch {}
+          }
+        }
+
+        const extraFrames = await page.$$(anchorFrameSelectors).catch(()=>[]);
+        for (const handle of extraFrames || []) {
+          candidates.push({ handle, label: 'bottom-anchor:iframe' });
+        }
+
+        for (const candidate of candidates) {
+          const { handle, label } = candidate;
+          if (!handle) continue;
+          if (await finishIfGclid() || aborted) return { attempted: 0, gclid: true };
+          const preferred = await preferIframeHandle(handle);
+          if (!preferred) continue;
+          const result = await clickBoundingBox(preferred, label, (box) => {
+            const jitterRange = Math.max(5, Math.min(45, Math.floor(box.width / 4) || 0));
+            const jitterX = randInt(-jitterRange, jitterRange);
+            const offsetY = randInt(4, Math.max(6, Math.min(24, Math.floor(box.height / 2) || 0)));
+            return {
+              x: box.width / 2 + jitterX,
+              y: Math.max(2, box.height - offsetY)
+            };
+          });
+          if (result.clicked) {
+            return { attempted: 1, gclid: result.gclid, via: label };
+          }
+        }
+
+        return { attempted: 0, gclid: false };
+      }
+
+      const bottomResult = await clickBottomBanner();
+      attempts += bottomResult.attempted;
+      if (bottomResult.gclid || gotGclid) {
+        return { attempted: attempts, gclid: true, via: bottomResult.via || 'bottom-anchor' };
+      }
       const primarySelectors = [
         'iframe[id*="aswift"], iframe[name*="aswift"], iframe[src*="googleads"], iframe[id*="google_ads"]',
         'div[id^="aswift_"][id$="_host"], div[id^="google_ads_iframe_"], div[id^="google_ads_frame"], div[id^="dfp-ad"], div[class*="adsbygoogle"], div[data-ad-client]',
