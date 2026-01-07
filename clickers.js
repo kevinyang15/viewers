@@ -5,7 +5,7 @@ import fsSync from 'fs';
 import path from 'path';
 import { chromium } from 'playwright';
 
-const TARGET_URL = process.env.TARGET_URL || 'https://alprestamo.com/blog/';
+const TARGET_URL = process.env.TARGET_URL || 'https://blog.monefin.net/';
 const SHOW_BROWSER = (process.env.SHOW_BROWSER || '0') === '1';
 const DEBUG_SLOWMO = parseInt(process.env.DEBUG_SLOWMO || '250', 10);
 const DEBUG_STAY_OPEN = parseInt(process.env.DEBUG_STAY_OPEN || '5000', 10);
